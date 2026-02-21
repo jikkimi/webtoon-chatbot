@@ -1,5 +1,5 @@
 const GEMINI_API_KEY = "AIzaSyCCy8MdeUCBXlF3iM3B-xYHgc10q4Q_jak"; // Provided in request
-const MODEL_NAME = "gemini-2.5-flash-lite";
+const MODEL_NAME = "gemini-1.5-flash";
 
 async function getChatResponse(userMessage, webtoonsData, chatHistory = []) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
