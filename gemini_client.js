@@ -1,5 +1,4 @@
-const GEMINI_API_KEY = ""; // ⚠️ API 키가 유출되어 비활성화되었습니다. 새 키를 발급받아 입력해주세요.
-const MODEL_NAME = "gemini-1.5-flash";
+// Client-side Gemini integration via serverless proxy
 
 async function getChatResponse(userMessage, webtoonsData, chatHistory = []) {
     try {
