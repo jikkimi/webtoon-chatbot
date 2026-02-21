@@ -2,7 +2,7 @@ const GEMINI_API_KEY = "AIzaSyCCy8MdeUCBXlF3iM3B-xYHgc10q4Q_jak"; // Provided in
 const MODEL_NAME = "gemini-1.5-flash";
 
 async function getChatResponse(userMessage, webtoonsData, chatHistory = []) {
-    const url = `https://generativelanguage.googleapis.com/v1/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
 
     // Construct the context
     const systemPrompt = `You are a webtoon recommendation expert. Your goal is to help users find webtoons from the provided database.
