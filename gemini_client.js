@@ -1,4 +1,4 @@
-const GEMINI_API_KEY = "AIzaSyCCy8MdeUCBXlF3iM3B-xYHgc10q4Q_jak"; // Provided in request
+const GEMINI_API_KEY = ""; // ⚠️ API 키가 유출되어 비활성화되었습니다. 새 키를 발급받아 입력해주세요.
 const MODEL_NAME = "gemini-1.5-flash";
 
 async function getChatResponse(userMessage, webtoonsData, chatHistory = []) {
