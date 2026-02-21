@@ -5,8 +5,7 @@ async function getChatResponse(userMessage, webtoonsData, chatHistory = []) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
 
     // Construct the context
-    const systemPrompt = `
-You are a webtoon recommendation expert. Your goal is to help users find webtoons from the provided database.
+    const systemPrompt = `You are a webtoon recommendation expert. Your goal is to help users find webtoons from the provided database.
 Rules:
 1. Use only the provided webtoon data.
 2. Recommend 3-5 works based on user preference.
@@ -18,10 +17,9 @@ Rules:
 5. For any other text, put it outside the tags.
 6. Support follow-up questions.
 
-Webtoon Database Summary:
+Webtoon Database Summary (Top 100):
 ${webtoonsData.slice(0, 100).map(w => `- ${w.title} (${w.genre?.join(', ') || 'N/A'}): ${w.story?.substring(0, 50)}...`).join('\n')}
-    (I have access to the full database of ${webtoonsData.length} works.)
-    `;
+(I have access to the full database of ${webtoonsData.length} works.)`;
 
     const messages = [
         { role: "user", parts: [{ text: systemPrompt }] },
@@ -38,9 +36,18 @@ ${webtoonsData.slice(0, 100).map(w => `- ${w.title} (${w.genre?.join(', ') || 'N
         });
 
         const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error?.message || `HTTP error! status: ${response.status}`);
+        }
+
+        if (!data.candidates || data.candidates.length === 0) {
+            throw new Error("No response from AI candidates.");
+        }
+
         return data.candidates[0].content.parts[0].text;
     } catch (error) {
-        console.error("Gemini API Error:", error);
-        return "죄송합니다. 챗봇 연결에 문제가 발생했습니다.";
+        console.error("Gemini API Error details:", error);
+        return `죄송합니다. 챗봇 연결에 문제가 발생했습니다. (오류: ${error.message})`;
     }
 }
