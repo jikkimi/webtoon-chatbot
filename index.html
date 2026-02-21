@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webtoon Deep Dive - 당신의 취향을 읽다</title>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #00dc64;
+            /* Naver Webtoon Green */
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass: rgba(30, 41, 59, 0.7);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Pretendard', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 2rem;
+            text-align: center;
+            background: linear-gradient(to bottom, rgba(0, 220, 100, 0.1), transparent);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Search & Filter Section */
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 300px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 1rem 1rem 1rem 3rem;
+            border-radius: 12px;
+            border: 1px solid var(--card-bg);
+            background: var(--card-bg);
+            color: var(--text);
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(0, 220, 100, 0.2);
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .filter-select {
+            padding: 0 1rem;
+            border-radius: 12px;
+            background: var(--card-bg);
+            color: var(--text);
+            border: 1px solid var(--card-bg);
+            cursor: pointer;
+        }
+
+        /* Webtoon Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .card img {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .card-info {
+            padding: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-author {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            color: var(--text-muted);
+        }
+
+        .age-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+        }
+
+        /* Chatbot UI */
+        #chatbot-trigger {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 64px;
+            height: 64px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 8px 16px rgba(0, 220, 100, 0.3);
+            z-index: 100;
+            transition: transform 0.3s;
+        }
+
+        #chatbot-trigger:hover {
+            transform: scale(1.1);
+        }
+
+        #chat-window {
+            position: fixed;
+            bottom: 6rem;
+            right: 2rem;
+            width: 400px;
+            height: 600px;
+            background: var(--card-bg);
+            border-radius: 20px;
+            display: none;
+            flex-direction: column;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+            z-index: 101;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .chat-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 0.75rem;
+            margin-top: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .chat-card-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .chat-card-reason {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .chat-card-line {
+            font-size: 0.8rem;
+            color: var(--primary);
+            font-style: italic;
+            margin-top: 0.5rem;
+            border-top: 1px dotted rgba(255, 255, 255, 0.1);
+            padding-top: 0.5rem;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem;
+            border-radius: 16px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .message.bot {
+            background: rgba(255, 255, 255, 0.05);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.user {
+            background: var(--primary);
+            color: #000;
+            font-weight: 500;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .chat-input-area {
+            padding: 1.5rem;
+            display: flex;
+            gap: 0.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-input {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            color: var(--text);
+            outline: none;
+        }
+
+        .send-btn {
+            background: var(--primary);
+            border: none;
+            padding: 0 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            color: #000;
+        }
+
+        /* Detail Modal */
+        #detail-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            border-radius: 24px;
+            overflow-y: auto;
+            position: relative;
+            padding: 2rem;
+            display: flex;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .modal-content {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            #chat-window {
+                width: 90vw;
+                right: 5vw;
+                bottom: 5rem;
+            }
+        }
+
+        .modal-img {
+            width: 300px;
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .modal-body {
+            flex: 1;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1.5rem;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .grid>* {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Webtoon Deep Dive</h1>
+        <p style="color: var(--text-muted)">당신의 취향을 데이터로 읽어드립니다.</p>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-input" placeholder="제목, 작가, 키워드 검색...">
+            </div>
+            <select id="genre-filter" class="filter-select">
+                <option value="all">전체 장르</option>
+            </select>
+            <select id="age-filter" class="filter-select">
+                <option value="all">연령 등급</option>
+                <option value="전체 이용가">전체 이용가</option>
+                <option value="12세 이용가">12세 이용가</option>
+                <option value="15세 이용가">15세 이용가</option>
+                <option value="19세 이용가">19세 이용가</option>
+                <option value="Unknown">Unknown</option>
+            </select>
+        </div>
+
+        <div id="webtoon-grid" class="grid">
+            <!-- Cards will be injected here -->
+        </div>
+    </div>
+
+    <!-- Chat Interface -->
+    <div id="chatbot-trigger">
+        <i data-lucide="message-circle"></i>
+    </div>
+
+    <div id="chat-window">
+        <div class="chat-header">
+            <span style="font-weight: 600">Deep Dive 챗봇</span>
+            <i data-lucide="x" style="cursor: pointer" onclick="toggleChat()"></i>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <div class="message bot">안녕하세요! 당신의 취향을 말해주시면 웹툰을 추천해 드릴게요. (예: "가벼운 일상물 추천해줘", "다크한 판타지 있어?")</div>
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" class="chat-input" placeholder="메시지를 입력하세요...">
+            <button class="send-btn" id="send-btn">
+                <i data-lucide="send"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div id="detail-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <img src="" alt="" id="modal-img" class="modal-img">
+            <div class="modal-body">
+                <h2 id="modal-title" style="margin-bottom: 0.5rem"></h2>
+                <div id="modal-author" style="color: var(--primary); font-weight: 600; margin-bottom: 1rem"></div>
+                <div id="modal-badges" style="margin-bottom: 1.5rem"></div>
+                <p id="modal-story" style="line-height: 1.8; margin-bottom: 1.5rem"></p>
+                <a id="modal-link" href="#" target="_blank"
+                    style="display: inline-block; padding: 0.75rem 1.5rem; background: var(--primary); color: #000; border-radius: 8px; text-decoration: none; font-weight: bold">바로
+                    보기</a>
+
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem">비슷한 작품 추천</h3>
+                <div id="similar-webtoons" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="webtoons_data.js"></script>
+    <script src="gemini_client.js"></script>
+    <script>
+        // Initialization
+        let filteredData = [...WEBTOONS_DATA];
+        const grid = document.getElementById('webtoon-grid');
+        const genreFilter = document.getElementById('genre-filter');
+        const searchInput = document.getElementById('search-input');
+        const ageFilter = document.getElementById('age-filter');
+
+        // Extract Genres
+        const genres = new Set();
+        WEBTOONS_DATA.forEach(w => {
+            if (w.genre) w.genre.forEach(g => {
+                if (!g.startsWith('#')) genres.add(g.replace(/\n.*/g, ''));
+            });
+        });
+        genres.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g;
+            opt.textContent = g;
+            genreFilter.appendChild(opt);
+        });
+
+        function renderGrid(data) {
+            grid.innerHTML = '';
+            data.forEach(w => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.onclick = () => openModal(w);
+
+                const tags = w.genre ? w.genre.filter(g => g.startsWith('#')).slice(0, 3) : [];
+
+                card.innerHTML = `
+                    <div class="age-badge">${w.ageRating || '전체'}</div>
+                    <img src="${w.thumbnail}" alt="${w.title}" onerror="this.src='https://via.placeholder.com/300x400?text=No+Image'">
+                    <div class="card-info">
+                        <div class="card-title">${w.title}</div>
+                        <div class="card-author">${w.author}</div>
+                        <div class="card-tags">
+                            ${tags.map(t => `<span class="tag">${t}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterData() {
+            const query = searchInput.value.toLowerCase();
+            const genre = genreFilter.value;
+            const age = ageFilter.value;
+
+            filteredData = WEBTOONS_DATA.filter(w => {
+                const matchesQuery = w.title.toLowerCase().includes(query) ||
+                    w.author.toLowerCase().includes(query) ||
+                    (w.story && w.story.toLowerCase().includes(query));
+                const matchesGenre = genre === 'all' || (w.genre && w.genre.some(g => g.includes(genre)));
+                const matchesAge = age === 'all' || w.ageRating === age;
+                return matchesQuery && matchesGenre && matchesAge;
+            });
+            renderGrid(filteredData);
+        }
+
+        searchInput.oninput = filterData;
+        genreFilter.onchange = filterData;
+        ageFilter.onchange = filterData;
+
+        // Modal Logic
+        function openModal(w) {
+            document.getElementById('modal-img').src = w.thumbnail;
+            document.getElementById('modal-title').textContent = w.title;
+            document.getElementById('modal-author').textContent = w.author;
+            document.getElementById('modal-story').textContent = w.story || '줄거리 정보가 없습니다.';
+            document.getElementById('modal-link').href = w.link;
+
+            const badges = document.getElementById('modal-badges');
+            badges.innerHTML = `<span class="tag" style="background:var(--primary); color:#000">${w.ageRating}</span>`;
+            if (w.genre) w.genre.slice(0, 5).forEach(g => {
+                badges.innerHTML += `<span class="tag">${g.replace(/\n.*/g, '')}</span> `;
+            });
+
+            // Similar works (by first genre)
+            const mainGenre = w.genre ? w.genre[0].replace(/\n.*/g, '') : null;
+            const similar = WEBTOONS_DATA.filter(item => item.title !== w.title && item.genre && item.genre.some(g => g.includes(mainGenre))).slice(0, 3);
+
+            const similarContainer = document.getElementById('similar-webtoons');
+            similarContainer.innerHTML = '';
+            similar.forEach(s => {
+                const item = document.createElement('div');
+                item.style.cursor = 'pointer';
+                item.onclick = (e) => { e.stopPropagation(); openModal(s); };
+                item.innerHTML = `
+                    <img src="${s.thumbnail}" style="width:100%; border-radius:8px; height:120px; object-fit:cover">
+                    <div style="font-size:0.8rem; text-align:center; margin-top:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis">${s.title}</div>
+                `;
+                similarContainer.appendChild(item);
+            });
+
+            document.getElementById('detail-modal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').style.display = 'none';
+        }
+
+        window.onclick = (e) => {
+            if (e.target === document.getElementById('detail-modal')) closeModal();
+        };
+
+        // Chatbot Logic
+        const trigger = document.getElementById('chatbot-trigger');
+        const windowEl = document.getElementById('chat-window');
+        const chatInput = document.getElementById('chat-input');
+        const sendBtn = document.getElementById('send-btn');
+        const messagesContainer = document.getElementById('chat-messages');
+
+        function toggleChat() {
+            windowEl.style.display = windowEl.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        trigger.onclick = toggleChat;
+
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            addMessage(text, 'user');
+            chatInput.value = '';
+
+            const loadingMsg = addMessage('생각 중입니다...', 'bot');
+
+            try {
+                const response = await getChatResponse(text, WEBTOONS_DATA);
+                loadingMsg.innerHTML = '';
+
+                // Try to parse recommendations
+                const jsonMatch = response.match(/\[RECOMMENDATIONS\]([\s\S]*?)\[\/RECOMMENDATIONS\]/) || response.match(/^(\[[\s\S]*\])$/);
+
+                if (jsonMatch) {
+                    const cleanJson = jsonMatch[1] || jsonMatch[0];
+                    try {
+                        const recs = JSON.parse(cleanJson);
+                        const introText = response.replace(/\[RECOMMENDATIONS\][\s\S]*?\[\/RECOMMENDATIONS\]/, '').trim();
+                        if (introText) {
+                            const p = document.createElement('div');
+                            p.innerText = introText;
+                            loadingMsg.appendChild(p);
+                        }
+
+                        recs.forEach(rec => {
+                            const webtoon = WEBTOONS_DATA.find(w => w.title.trim() === rec.title.trim());
+                            if (webtoon) {
+                                const card = document.createElement('div');
+                                card.className = 'chat-card';
+                                card.onclick = (e) => { e.stopPropagation(); openModal(webtoon); };
+                                card.innerHTML = `
+                                    <img src="${webtoon.thumbnail}" onerror="this.src='https://via.placeholder.com/300x150?text=No+Image'">
+                                    <div class="chat-card-title">${webtoon.title}</div>
+                                    <div class="chat-card-reason">${rec.reason}</div>
+                                    <div class="chat-card-line">"${rec.line}"</div>
+                                `;
+                                loadingMsg.appendChild(card);
+                            }
+                        });
+                    } catch (e) {
+                        loadingMsg.innerText = response;
+                    }
+                } else {
+                    loadingMsg.innerText = response;
+                }
+            } catch (e) {
+                loadingMsg.innerText = '오류가 발생했습니다.';
+            }
+        }
+
+        function addMessage(text, role) {
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+            msg.innerText = text;
+            messagesContainer.appendChild(msg);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return msg;
+        }
+
+        sendBtn.onclick = sendMessage;
+        chatInput.onkeypress = (e) => { if (e.key === 'Enter') sendMessage(); };
+
+        // Initial Render
+        lucide.createIcons();
+        renderGrid(filteredData);
+    </script>
+</body>
+
+</html>
