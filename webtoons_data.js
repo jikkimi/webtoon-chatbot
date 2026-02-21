@@ -1,5 +1,4 @@
-const WEBTOONS_DATA =  
-[
+﻿const WEBTOONS_DATA = [
   {
     "title": "철이 없어서 그래",
     "author": "심도수",
@@ -18670,4 +18669,4 @@ const WEBTOONS_DATA =
     ],
     "ageRating": "15세 이용가"
   }
-]; 
+];
